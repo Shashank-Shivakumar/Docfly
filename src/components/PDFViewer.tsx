@@ -1,11 +1,16 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { Document, Page, pdfjs } from 'react-pdf';
 import { ZoomIn, ZoomOut, RotateCcw, ChevronLeft, ChevronRight } from 'lucide-react';
 import { FormField } from '../types';
 import { FormFieldComponent } from './FormFieldComponent';
 
-// Set up PDF.js worker
-pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
+// Set up PDF.js worker with CDN and local fallback
+try {
+  pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
+} catch (error) {
+  // Fallback to local worker file
+  pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.js';
+}
 
 interface PDFViewerProps {
   pdfFile: File | null;
@@ -38,6 +43,8 @@ export const PDFViewer: React.FC<PDFViewerProps> = ({
   const [isDragging, setIsDragging] = useState(false);
   const [pageWidth, setPageWidth] = useState(612);
   const [pageHeight, setPageHeight] = useState(792);
+  const [isLoading, setIsLoading] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const viewerRef = useRef<HTMLDivElement>(null);
 
   const handleZoomIn = () => setZoom(prev => Math.min(prev + 0.25, 3));
@@ -46,6 +53,14 @@ export const PDFViewer: React.FC<PDFViewerProps> = ({
 
   const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
     onTotalPagesChange(numPages);
+    setIsLoading(false);
+    setLoadError(null);
+  };
+
+  const onDocumentLoadError = (error: Error) => {
+    console.error('Error loading PDF:', error);
+    setLoadError('Failed to load PDF. Please check if the file is valid and try again.');
+    setIsLoading(false);
   };
 
   const onPageLoadSuccess = (page: any) => {
@@ -53,6 +68,18 @@ export const PDFViewer: React.FC<PDFViewerProps> = ({
     setPageWidth(width);
     setPageHeight(height);
   };
+
+  const onPageLoadError = (error: Error) => {
+    console.error('Error loading page:', error);
+  };
+
+  // Reset loading state when file changes
+  useEffect(() => {
+    if (pdfFile) {
+      setIsLoading(true);
+      setLoadError(null);
+    }
+  }, [pdfFile]);
 
   const handleViewerClick = useCallback((e: React.MouseEvent) => {
     if (!selectedTool || isDragging) return;
@@ -180,10 +207,11 @@ export const PDFViewer: React.FC<PDFViewerProps> = ({
             }}
             onClick={handleViewerClick}
           >
-            {pdfFile ? (
+            {pdfFile && !loadError ? (
               <Document
                 file={pdfFile}
                 onLoadSuccess={onDocumentLoadSuccess}
+                onLoadError={onDocumentLoadError}
                 loading={
                   <div className="flex items-center justify-center w-96 h-96 bg-white border border-gray-300">
                     <div className="text-center">
@@ -196,19 +224,42 @@ export const PDFViewer: React.FC<PDFViewerProps> = ({
                   <div className="flex items-center justify-center w-96 h-96 bg-white border border-gray-300">
                     <div className="text-center text-red-600">
                       <div className="text-lg mb-2">Failed to load PDF</div>
-                      <div className="text-sm">Please try uploading again</div>
+                      <div className="text-sm">Please check if the file is valid and try uploading again</div>
                     </div>
                   </div>
                 }
+                options={{
+                  cMapUrl: 'https://unpkg.com/pdfjs-dist@3.11.174/cmaps/',
+                  cMapPacked: true,
+                }}
               >
                 <Page
                   pageNumber={currentPage}
                   onLoadSuccess={onPageLoadSuccess}
+                  onLoadError={onPageLoadError}
                   renderTextLayer={false}
                   renderAnnotationLayer={false}
                   className="relative"
+                  loading={
+                    <div className="flex items-center justify-center w-96 h-96 bg-white border border-gray-300">
+                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                    </div>
+                  }
                 />
               </Document>
+            ) : loadError ? (
+              <div className="flex items-center justify-center w-96 h-96 bg-white border border-gray-300">
+                <div className="text-center text-red-600">
+                  <div className="text-lg mb-2">Failed to Preview PDF</div>
+                  <div className="text-sm mb-4">{loadError}</div>
+                  <button
+                    onClick={() => window.location.reload()}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                  >
+                    Try Again
+                  </button>
+                </div>
+              </div>
             ) : (
               <div className="flex items-center justify-center w-96 h-96 bg-white border border-gray-300 text-gray-400 text-lg">
                 No PDF loaded
@@ -216,7 +267,7 @@ export const PDFViewer: React.FC<PDFViewerProps> = ({
             )}
 
             {/* Form Fields Overlay */}
-            {pdfFile && currentPageFields.map((field) => (
+            {pdfFile && !loadError && currentPageFields.map((field) => (
               <FormFieldComponent
                 key={field.id}
                 field={field}
@@ -230,7 +281,7 @@ export const PDFViewer: React.FC<PDFViewerProps> = ({
             ))}
 
             {/* Selection Guide */}
-            {selectedTool && pdfFile && (
+            {selectedTool && pdfFile && !loadError && (
               <div className="absolute inset-0 pointer-events-none">
                 <div className="absolute top-4 left-4 bg-blue-600 text-white px-3 py-1 rounded-lg text-sm shadow-lg">
                   Click to add {selectedTool} field

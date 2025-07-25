@@ -9,6 +9,7 @@ import { exportFillablePDF, exportFlattenedPDF, downloadPDF } from './utils/pdfE
 
 function App() {
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   
   const {
     document,
@@ -33,10 +34,16 @@ function App() {
 
   const handleFileUpload = async (file: File) => {
     setIsLoading(true);
+    setError(null);
+    
     try {
       await loadPDF(file);
     } catch (error) {
       console.error('Error loading PDF:', error);
+      const errorMessage = error instanceof Error 
+        ? error.message 
+        : 'Failed to load PDF. Please check if the file is valid and try again.';
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -70,7 +77,27 @@ function App() {
   };
 
   if (!document) {
-    return <PDFUpload onFileUpload={handleFileUpload} isLoading={isLoading} />;
+    return (
+      <div>
+        <PDFUpload onFileUpload={handleFileUpload} isLoading={isLoading} />
+        {error && (
+          <div className="fixed bottom-4 right-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg shadow-lg max-w-md">
+            <div className="flex items-start">
+              <div className="flex-1">
+                <p className="font-medium">Upload Error</p>
+                <p className="text-sm">{error}</p>
+              </div>
+              <button
+                onClick={() => setError(null)}
+                className="ml-3 text-red-400 hover:text-red-600"
+              >
+                ×
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    );
   }
 
   return (
@@ -144,6 +171,24 @@ function App() {
           <div className="bg-white rounded-lg p-6 flex items-center space-x-3">
             <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
             <span className="text-gray-900">Processing...</span>
+          </div>
+        </div>
+      )}
+
+      {/* Error Toast */}
+      {error && (
+        <div className="fixed bottom-4 right-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg shadow-lg max-w-md z-50">
+          <div className="flex items-start">
+            <div className="flex-1">
+              <p className="font-medium">Error</p>
+              <p className="text-sm">{error}</p>
+            </div>
+            <button
+              onClick={() => setError(null)}
+              className="ml-3 text-red-400 hover:text-red-600 text-xl leading-none"
+            >
+              ×
+            </button>
           </div>
         </div>
       )}

@@ -1,5 +1,5 @@
 import React, { useCallback } from 'react';
-import { Upload, FileText } from 'lucide-react';
+import { Upload, FileText, AlertCircle } from 'lucide-react';
 
 interface PDFUploadProps {
   onFileUpload: (file: File) => void;
@@ -7,21 +7,48 @@ interface PDFUploadProps {
 }
 
 export const PDFUpload: React.FC<PDFUploadProps> = ({ onFileUpload, isLoading }) => {
+  const validateAndUploadFile = useCallback((file: File) => {
+    // Validate file type
+    if (!file.type.includes('pdf') && !file.name.toLowerCase().endsWith('.pdf')) {
+      alert('Please select a valid PDF file');
+      return;
+    }
+
+    // Validate file size (max 50MB)
+    if (file.size > 50 * 1024 * 1024) {
+      alert('File size too large. Please select a file smaller than 50MB');
+      return;
+    }
+
+    // Validate file size (min 1KB)
+    if (file.size < 1024) {
+      alert('File appears to be corrupted or empty');
+      return;
+    }
+
+    onFileUpload(file);
+  }, [onFileUpload]);
+
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     const files = Array.from(e.dataTransfer.files);
-    const pdfFile = files.find(file => file.type === 'application/pdf');
+    const pdfFile = files.find(file => 
+      file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')
+    );
+    
     if (pdfFile) {
-      onFileUpload(pdfFile);
+      validateAndUploadFile(pdfFile);
+    } else {
+      alert('Please drop a valid PDF file');
     }
-  }, [onFileUpload]);
+  }, [validateAndUploadFile]);
 
   const handleFileInput = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file && file.type === 'application/pdf') {
-      onFileUpload(file);
+    if (file) {
+      validateAndUploadFile(file);
     }
-  }, [onFileUpload]);
+  }, [validateAndUploadFile]);
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
@@ -49,7 +76,7 @@ export const PDFUpload: React.FC<PDFUploadProps> = ({ onFileUpload, isLoading })
             Choose PDF File
             <input
               type="file"
-              accept=".pdf"
+              accept=".pdf,application/pdf"
               onChange={handleFileInput}
               className="hidden"
               disabled={isLoading}
@@ -65,6 +92,20 @@ export const PDFUpload: React.FC<PDFUploadProps> = ({ onFileUpload, isLoading })
             </div>
           </div>
         )}
+
+        <div className="mt-6 p-4 bg-blue-50 rounded-lg">
+          <div className="flex items-start">
+            <AlertCircle className="w-5 h-5 text-blue-600 mt-0.5 mr-3 flex-shrink-0" />
+            <div className="text-sm text-blue-800">
+              <p className="font-medium mb-1">Supported formats:</p>
+              <ul className="list-disc list-inside space-y-1">
+                <li>PDF files (.pdf)</li>
+                <li>Maximum size: 50MB</li>
+                <li>Standard PDF format</li>
+              </ul>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
