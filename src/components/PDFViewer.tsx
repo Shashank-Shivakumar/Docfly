@@ -1,16 +1,12 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { Document, Page, pdfjs } from 'react-pdf';
+import type { PDFDocumentProxy, PDFPageProxy } from 'pdfjs-dist';
 import { ZoomIn, ZoomOut, RotateCcw, ChevronLeft, ChevronRight } from 'lucide-react';
 import { FormField } from '../types';
 import { FormFieldComponent } from './FormFieldComponent';
 
-// Set up PDF.js worker with CDN and local fallback
-try {
-  pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
-} catch (error) {
-  // Fallback to local worker file
-  pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.js';
-}
+// Set up PDF.js worker for version 7.7.3
+pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
 
 interface PDFViewerProps {
   pdfFile: File | null;
@@ -51,10 +47,12 @@ export const PDFViewer: React.FC<PDFViewerProps> = ({
   const handleZoomOut = () => setZoom(prev => Math.max(prev - 0.25, 0.5));
   const handleResetZoom = () => setZoom(1);
 
-  const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
+  const onDocumentLoadSuccess = (pdf: PDFDocumentProxy) => {
+    const numPages = pdf.numPages;
     onTotalPagesChange(numPages);
     setIsLoading(false);
     setLoadError(null);
+    console.log('PDF loaded successfully with', numPages, 'pages');
   };
 
   const onDocumentLoadError = (error: Error) => {
@@ -63,14 +61,19 @@ export const PDFViewer: React.FC<PDFViewerProps> = ({
     setIsLoading(false);
   };
 
-  const onPageLoadSuccess = (page: any) => {
-    const { width, height } = page;
-    setPageWidth(width);
-    setPageHeight(height);
+  const onPageLoadSuccess = (page: PDFPageProxy) => {
+    const viewport = page.getViewport({ scale: 1 });
+    setPageWidth(viewport.width);
+    setPageHeight(viewport.height);
+    console.log('Page loaded successfully:', viewport.width, 'x', viewport.height);
   };
 
   const onPageLoadError = (error: Error) => {
     console.error('Error loading page:', error);
+  };
+
+  const onPageRenderSuccess = () => {
+    console.log('Page rendered successfully');
   };
 
   // Reset loading state when file changes
@@ -78,6 +81,7 @@ export const PDFViewer: React.FC<PDFViewerProps> = ({
     if (pdfFile) {
       setIsLoading(true);
       setLoadError(null);
+      console.log('Loading PDF file:', pdfFile.name, 'Size:', pdfFile.size);
     }
   }, [pdfFile]);
 
@@ -228,15 +232,12 @@ export const PDFViewer: React.FC<PDFViewerProps> = ({
                     </div>
                   </div>
                 }
-                options={{
-                  cMapUrl: 'https://unpkg.com/pdfjs-dist@3.11.174/cmaps/',
-                  cMapPacked: true,
-                }}
               >
                 <Page
                   pageNumber={currentPage}
                   onLoadSuccess={onPageLoadSuccess}
                   onLoadError={onPageLoadError}
+                  onRenderSuccess={onPageRenderSuccess}
                   renderTextLayer={false}
                   renderAnnotationLayer={false}
                   className="relative"
@@ -253,7 +254,10 @@ export const PDFViewer: React.FC<PDFViewerProps> = ({
                   <div className="text-lg mb-2">Failed to Preview PDF</div>
                   <div className="text-sm mb-4">{loadError}</div>
                   <button
-                    onClick={() => window.location.reload()}
+                    onClick={() => {
+                      setLoadError(null);
+                      window.location.reload();
+                    }}
                     className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
                   >
                     Try Again
