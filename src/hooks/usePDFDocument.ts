@@ -11,21 +11,44 @@ export const usePDFDocument = () => {
   const [history, setHistory] = useState<PDFDocument[]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
 
-  const loadPDF = useCallback((file: File) => {
-    const newDoc: PDFDocument = {
-      id: uuidv4(),
-      name: file.name,
-      file,
-      pages: totalPages || 1,
-      fields: [],
-      createdAt: new Date(),
-      updatedAt: new Date()
-    };
-    
-    setDocument(newDoc);
-    setHistory([newDoc]);
-    setHistoryIndex(0);
-    setCurrentPage(1);
+  const loadPDF = useCallback(async (file: File): Promise<void> => {
+    try {
+      // Validate file type
+      if (!file.type.includes('pdf') && !file.name.toLowerCase().endsWith('.pdf')) {
+        throw new Error('Please select a valid PDF file');
+      }
+
+      // Validate file size (max 50MB)
+      if (file.size > 50 * 1024 * 1024) {
+        throw new Error('File size too large. Please select a file smaller than 50MB');
+      }
+
+      // Create a new PDF document object
+      const newDoc: PDFDocument = {
+        id: uuidv4(),
+        name: file.name,
+        file,
+        pages: 1, // Will be updated when PDF loads
+        fields: [],
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+      
+      // Set the document immediately to trigger PDF loading in the viewer
+      setDocument(newDoc);
+      setHistory([newDoc]);
+      setHistoryIndex(0);
+      setCurrentPage(1);
+      setSelectedField(null);
+      setSelectedTool(null);
+      
+      // Reset totalPages - will be updated by onDocumentLoadSuccess
+      setTotalPages(0);
+
+    } catch (error) {
+      console.error('Error in loadPDF:', error);
+      throw error; // Re-throw to be handled by the calling component
+    }
   }, []);
 
   const updateTotalPages = useCallback((pages: number) => {
@@ -33,8 +56,15 @@ export const usePDFDocument = () => {
     if (document) {
       const updatedDoc = { ...document, pages };
       setDocument(updatedDoc);
+      
+      // Update history as well
+      const newHistory = [...history];
+      if (newHistory[historyIndex]) {
+        newHistory[historyIndex] = updatedDoc;
+        setHistory(newHistory);
+      }
     }
-  }, [document]);
+  }, [document, history, historyIndex]);
 
   const addField = useCallback((fieldData: Omit<FormField, 'id'>) => {
     if (!document) return;
