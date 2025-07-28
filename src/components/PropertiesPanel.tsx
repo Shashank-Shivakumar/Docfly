@@ -69,6 +69,25 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
           </div>
 
           <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Question
+              <span className="text-xs text-gray-500 font-normal ml-2">(appears when field is selected)</span>
+            </label>
+            <textarea
+              value={selectedField.properties.question || ''}
+              onChange={(e) => updateProperty('question', e.target.value)}
+              placeholder="Enter a question or description for this field. This will help users understand what information to enter."
+              rows={3}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none text-sm"
+            />
+            {selectedField.properties.question && (
+              <p className="text-xs text-gray-500 mt-1">
+                This question will appear above the field when selected.
+              </p>
+            )}
+          </div>
+
+          <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Placeholder</label>
             <input
               type="text"

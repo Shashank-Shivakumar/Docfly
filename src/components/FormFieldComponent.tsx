@@ -211,6 +211,15 @@ export const FormFieldComponent: React.FC<FormFieldComponentProps> = ({
           <div className="absolute -top-6 left-0 bg-blue-600 text-white text-xs px-2 py-1 rounded whitespace-nowrap">
             {field.properties.name}
           </div>
+
+          {/* Question Display */}
+          {field.properties.question && (
+            <div className="absolute -top-20 left-0 bg-green-700 text-white text-xs px-3 py-2 rounded-lg max-w-sm whitespace-normal shadow-lg border-2 border-green-500 z-20">
+              <div className="font-semibold text-green-100 mb-1">Question:</div>
+              <div className="text-white leading-relaxed">{field.properties.question}</div>
+              <div className="absolute bottom-0 left-4 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-green-700 transform translate-y-full"></div>
+            </div>
+          )}
         </>
       )}
     </div>
