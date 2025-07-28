@@ -9,6 +9,7 @@ export interface FormField {
   properties: {
     name: string;
     placeholder?: string;
+    question?: string;
     required: boolean;
     combed?: boolean;
     combedLength?: number;

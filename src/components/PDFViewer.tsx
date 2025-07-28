@@ -105,6 +105,7 @@ export const PDFViewer: React.FC<PDFViewerProps> = ({
       properties: {
         name: `${selectedTool}_${Date.now()}`,
         placeholder: `Enter ${selectedTool}`,
+        question: '',
         required: false,
         fontSize: 12,
         bold: false,
