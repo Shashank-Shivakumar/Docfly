@@ -159,6 +159,7 @@ function App() {
         {/* Properties Panel */}
         <PropertiesPanel
           selectedField={selectedField}
+          allFields={document.fields}
           onFieldUpdate={updateField}
           onFieldDelete={deleteField}
           onClose={() => setSelectedField(null)}

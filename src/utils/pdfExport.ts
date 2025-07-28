@@ -14,7 +14,7 @@ export const exportFillablePDF = async (document: PDFDocument): Promise<Uint8Arr
 
     // Add form fields
     for (const field of document.fields) {
-      await addFormFieldToPDF(form, field, pdfDoc);
+      await addFormFieldToPDF(form, field, pdfDoc, document.fields);
     }
 
     // Save the PDF
@@ -38,7 +38,7 @@ export const exportFlattenedPDF = async (document: PDFDocument): Promise<Uint8Ar
 
     // Add form fields
     for (const field of document.fields) {
-      await addFormFieldToPDF(form, field, pdfDoc);
+      await addFormFieldToPDF(form, field, pdfDoc, document.fields);
     }
 
     // Flatten the form (make fields non-interactive)
@@ -52,7 +52,7 @@ export const exportFlattenedPDF = async (document: PDFDocument): Promise<Uint8Ar
   }
 };
 
-const addFormFieldToPDF = async (form: PDFForm, field: FormField, pdfDoc: PDFLibDocument) => {
+const addFormFieldToPDF = async (form: PDFForm, field: FormField, pdfDoc: PDFLibDocument, allFields: FormField[]) => {
   const pages = pdfDoc.getPages();
   const page = pages[field.pageNumber - 1];
   
@@ -163,7 +163,6 @@ const addFormFieldToPDF = async (form: PDFForm, field: FormField, pdfDoc: PDFLib
         break;
 
       case 'signature':
-      case 'initials':
         const sigField = form.createTextField(properties.name);
         sigField.addToPage(page, {
           x,
@@ -177,9 +176,50 @@ const addFormFieldToPDF = async (form: PDFForm, field: FormField, pdfDoc: PDFLib
           borderWidth: properties.borderWidth,
         });
         break;
+
+      case 'initials':
+        // For initials, we'll create a text field with a dashed border
+        const initialsField = form.createTextField(properties.name);
+        initialsField.addToPage(page, {
+          x,
+          y: pdfY,
+          width,
+          height,
+          backgroundColor: properties.backgroundColor !== 'transparent' 
+            ? parseColor(properties.backgroundColor) 
+            : undefined,
+          borderColor: parseColor(properties.borderColor),
+          borderWidth: properties.borderWidth,
+        });
+        break;
+
+      case 'question':
+        // For questions, we'll add the question text as a text annotation above the related field
+        if (properties.questionText && properties.relatedFieldId) {
+          // Find the related field to position the question above it
+          const relatedField = allFields.find((f: FormField) => f.id === properties.relatedFieldId);
+          if (relatedField) {
+            const questionX = relatedField.x;
+            const questionY = relatedField.y + relatedField.height + 10; // 10px above the field
+            const questionPdfY = pageHeight - questionY;
+            
+            // Add question text as a text annotation
+            page.drawText(properties.questionText, {
+              x: questionX,
+              y: questionPdfY,
+              size: 10,
+              color: rgb(0.6, 0.4, 0.2), // Brown color for questions
+            });
+          }
+        }
+        break;
+
+      default:
+        console.warn(`Unsupported field type: ${field.type}`);
+        break;
     }
   } catch (error) {
-    console.warn(`Failed to add field ${field.properties.name}:`, error);
+    console.error(`Error adding field ${field.id} to PDF:`, error);
   }
 };
 

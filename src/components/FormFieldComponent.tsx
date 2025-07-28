@@ -10,6 +10,7 @@ interface FormFieldComponentProps {
   onDragStart: () => void;
   onDragEnd: () => void;
   zoom: number;
+  relatedQuestions?: FormField[]; // Questions related to this field
 }
 
 export const FormFieldComponent: React.FC<FormFieldComponentProps> = ({
@@ -19,7 +20,8 @@ export const FormFieldComponent: React.FC<FormFieldComponentProps> = ({
   onUpdate,
   onDragStart,
   onDragEnd,
-  zoom
+  zoom,
+  relatedQuestions = []
 }) => {
   const [isDragging, setIsDragging] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
@@ -173,6 +175,27 @@ export const FormFieldComponent: React.FC<FormFieldComponentProps> = ({
           </div>
         );
       
+      case 'question':
+        return (
+          <div
+            className="flex items-start space-x-2 p-2 bg-yellow-50 border-2 border-yellow-200 rounded-lg"
+            style={{ 
+              ...style, 
+              backgroundColor: 'rgba(245, 158, 11, 0.1)',
+              borderColor: '#fbbf24'
+            }}
+          >
+            <div className="flex-shrink-0 mt-1">
+              <div className="w-5 h-5 bg-yellow-500 text-white rounded-full flex items-center justify-center text-xs font-bold">
+                ?
+              </div>
+            </div>
+            <div className="flex-1 text-sm text-gray-800">
+              {properties.questionText || 'Enter your question here...'}
+            </div>
+          </div>
+        );
+      
       default:
         return (
           <div style={style} className="flex items-center justify-center text-gray-500">
@@ -195,6 +218,30 @@ export const FormFieldComponent: React.FC<FormFieldComponentProps> = ({
       }}
       onMouseDown={handleMouseDown}
     >
+      {/* Display related questions above text fields */}
+      {relatedQuestions.length > 0 && (field.type === 'text' || field.type === 'paragraph') && (
+        <div className="absolute -top-16 left-0 right-0">
+          {relatedQuestions.map((question) => (
+            <div
+              key={question.id}
+              className="mb-2 p-2 bg-yellow-50 border-2 border-yellow-200 rounded-lg shadow-sm"
+              style={{ minWidth: '200px' }}
+            >
+              <div className="flex items-start space-x-2">
+                <div className="flex-shrink-0 mt-1">
+                  <div className="w-4 h-4 bg-yellow-500 text-white rounded-full flex items-center justify-center text-xs font-bold">
+                    ?
+                  </div>
+                </div>
+                <div className="flex-1 text-xs text-gray-800">
+                  {question.properties.questionText || 'Question'}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+      
       {renderFieldContent()}
       
       {isSelected && (

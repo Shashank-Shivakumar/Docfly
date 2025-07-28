@@ -4,6 +4,7 @@ import { X, Settings, Type, Palette } from 'lucide-react';
 
 interface PropertiesPanelProps {
   selectedField: FormField | null;
+  allFields: FormField[];
   onFieldUpdate: (fieldId: string, updates: Partial<FormField>) => void;
   onFieldDelete: (fieldId: string) => void;
   onClose: () => void;
@@ -11,6 +12,7 @@ interface PropertiesPanelProps {
 
 export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
   selectedField,
+  allFields,
   onFieldUpdate,
   onFieldDelete,
   onClose
@@ -158,6 +160,45 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
               >
                 + Add Option
               </button>
+            </div>
+          </div>
+        )}
+
+        {/* Question Properties */}
+        {selectedField.type === 'question' && (
+          <div className="space-y-4">
+            <h4 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">Question</h4>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Question Text</label>
+              <textarea
+                value={selectedField.properties.questionText || ''}
+                onChange={(e) => updateProperty('questionText', e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                rows={3}
+                placeholder="Enter your question here..."
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Related Text Field</label>
+              <select
+                value={selectedField.properties.relatedFieldId || ''}
+                onChange={(e) => updateProperty('relatedFieldId', e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="">Select a text field...</option>
+                {allFields
+                  .filter(field => field.type === 'text' || field.type === 'paragraph')
+                  .map(field => (
+                    <option key={field.id} value={field.id}>
+                      {field.properties.name}
+                    </option>
+                  ))}
+              </select>
+              <p className="text-xs text-gray-500 mt-1">
+                Select a text field to display this question above it
+              </p>
             </div>
           </div>
         )}

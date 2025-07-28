@@ -96,8 +96,11 @@ export const PDFViewer: React.FC<PDFViewerProps> = ({
       type: selectedTool as any,
       x,
       y,
-      width: selectedTool === 'signature' || selectedTool === 'initials' ? 150 : 120,
-      height: selectedTool === 'paragraph' ? 80 : 32,
+      width: selectedTool === 'signature' || selectedTool === 'initials' ? 150 : 
+             selectedTool === 'paragraph' ? 120 : 
+             selectedTool === 'question' ? 200 : 120,
+      height: selectedTool === 'paragraph' ? 80 : 
+              selectedTool === 'question' ? 60 : 32,
       pageNumber: currentPage,
       properties: {
         name: `${selectedTool}_${Date.now()}`,
@@ -111,6 +114,10 @@ export const PDFViewer: React.FC<PDFViewerProps> = ({
         borderWidth: 1,
         ...(selectedTool === 'dropdown' || selectedTool === 'radio' 
           ? { options: ['Option 1', 'Option 2', 'Option 3'] } 
+          : {}
+        ),
+        ...(selectedTool === 'question' 
+          ? { questionText: 'Enter your question here...' } 
           : {}
         )
       }
@@ -271,18 +278,29 @@ export const PDFViewer: React.FC<PDFViewerProps> = ({
             )}
 
             {/* Form Fields Overlay */}
-            {pdfFile && !loadError && currentPageFields.map((field) => (
-              <FormFieldComponent
-                key={field.id}
-                field={field}
-                isSelected={selectedField?.id === field.id}
-                onSelect={() => onFieldSelect(field)}
-                onUpdate={(updates) => onFieldUpdate(field.id, updates)}
-                onDragStart={() => setIsDragging(true)}
-                onDragEnd={() => setIsDragging(false)}
-                zoom={zoom}
-              />
-            ))}
+            {pdfFile && !loadError && currentPageFields.map((field) => {
+              // Find questions related to this field
+              const relatedQuestions = fields.filter(
+                questionField => 
+                  questionField.type === 'question' && 
+                  questionField.properties.relatedFieldId === field.id &&
+                  questionField.pageNumber === currentPage
+              );
+              
+              return (
+                <FormFieldComponent
+                  key={field.id}
+                  field={field}
+                  isSelected={selectedField?.id === field.id}
+                  onSelect={() => onFieldSelect(field)}
+                  onUpdate={(updates) => onFieldUpdate(field.id, updates)}
+                  onDragStart={() => setIsDragging(true)}
+                  onDragEnd={() => setIsDragging(false)}
+                  zoom={zoom}
+                  relatedQuestions={relatedQuestions}
+                />
+              );
+            })}
 
             {/* Selection Guide */}
             {selectedTool && pdfFile && !loadError && (

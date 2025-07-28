@@ -12,7 +12,8 @@ import {
   Download,
   Undo,
   Redo,
-  Trash2
+  Trash2,
+  HelpCircle
 } from 'lucide-react';
 
 interface ToolbarProps {
@@ -36,6 +37,7 @@ const toolButtons = [
   { id: 'date', icon: Calendar, label: 'Date Field', group: 'fields' },
   { id: 'signature', icon: PenTool, label: 'Signature', group: 'fields' },
   { id: 'initials', icon: Users, label: 'Initials', group: 'fields' },
+  { id: 'question', icon: HelpCircle, label: 'Question', group: 'fields' },
 ];
 
 export const Toolbar: React.FC<ToolbarProps> = ({

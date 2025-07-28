@@ -1,6 +1,6 @@
 export interface FormField {
   id: string;
-  type: 'text' | 'paragraph' | 'checkbox' | 'radio' | 'dropdown' | 'date' | 'signature' | 'initials';
+  type: 'text' | 'paragraph' | 'checkbox' | 'radio' | 'dropdown' | 'date' | 'signature' | 'initials' | 'question';
   x: number;
   y: number;
   width: number;
@@ -20,6 +20,8 @@ export interface FormField {
     borderWidth: number;
     options?: string[]; // for dropdown, radio
     value?: string;
+    questionText?: string; // for question fields
+    relatedFieldId?: string; // for linking questions to text labels
   };
 }
 
