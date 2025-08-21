@@ -91,6 +91,10 @@ export const PDFViewer: React.FC<PDFViewerProps> = ({
     const rect = e.currentTarget.getBoundingClientRect();
     const x = (e.clientX - rect.left) / zoom;
     const y = (e.clientY - rect.top) / zoom;
+    
+    // Store the actual PDF coordinates (not zoom-adjusted)
+    const pdfX = x;
+    const pdfY = y;
 
     const newField: Omit<FormField, 'id'> = {
       type: selectedTool as any,
@@ -99,9 +103,12 @@ export const PDFViewer: React.FC<PDFViewerProps> = ({
       width: selectedTool === 'signature' || selectedTool === 'initials' ? 150 : 120,
       height: selectedTool === 'paragraph' ? 80 : 32,
       pageNumber: currentPage,
+      isConfigured: false,
       properties: {
         name: `${selectedTool}_${Date.now()}`,
         placeholder: `Enter ${selectedTool}`,
+        hasDefaultText: false,
+        defaultText: '',
         question: '',
         required: false,
         fontSize: 12,
@@ -112,6 +119,17 @@ export const PDFViewer: React.FC<PDFViewerProps> = ({
         borderWidth: 1,
         ...(selectedTool === 'dropdown' || selectedTool === 'radio' 
           ? { options: ['Option 1', 'Option 2', 'Option 3'] } 
+          : {}
+        ),
+        ...(selectedTool === 'checkbox' 
+          ? { 
+              checkboxOptions: [
+                { label: 'Option 1', field: `checkbox_${Date.now()}_1`, field_value: 'Yes_1', default_checked: false },
+                { label: 'Option 2', field: `checkbox_${Date.now()}_2`, field_value: 'Yes_2', default_checked: false },
+                { label: 'Option 3', field: `checkbox_${Date.now()}_3`, field_value: 'Yes_3', default_checked: false }
+              ],
+              defaultCheckedOption: ''
+            } 
           : {}
         )
       }

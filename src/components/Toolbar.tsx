@@ -19,7 +19,7 @@ interface ToolbarProps {
   selectedTool: string | null;
   onToolSelect: (tool: string) => void;
   onSave: () => void;
-  onDownload: (type: 'fillable' | 'flattened') => void;
+  onDownload: (type: 'fillable' | 'flattened' | 'json') => void;
   onUndo: () => void;
   onRedo: () => void;
   onClear: () => void;
@@ -125,9 +125,15 @@ export const Toolbar: React.FC<ToolbarProps> = ({
               </button>
               <button
                 onClick={() => onDownload('flattened')}
-                className="w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-50 rounded-b-lg"
+                className="w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-50"
               >
                 Flattened PDF
+              </button>
+              <button
+                onClick={() => onDownload('json')}
+                className="w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-50 rounded-b-lg"
+              >
+                Download Form JSON
               </button>
             </div>
           </div>

@@ -1,6 +1,6 @@
 import React from 'react';
 import { FormField } from '../types';
-import { X, Settings, Type, Palette } from 'lucide-react';
+import { X, Settings, Type } from 'lucide-react';
 
 interface PropertiesPanelProps {
   selectedField: FormField | null;
@@ -88,14 +88,37 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Placeholder</label>
-            <input
-              type="text"
-              value={selectedField.properties.placeholder || ''}
-              onChange={(e) => updateProperty('placeholder', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            />
+            <div className="flex items-center mb-2">
+              <input
+                type="checkbox"
+                id="hasDefaultText"
+                checked={selectedField.properties.hasDefaultText}
+                onChange={(e) => updateProperty('hasDefaultText', e.target.checked)}
+                className="mr-2 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              />
+              <label htmlFor="hasDefaultText" className="text-sm font-medium text-gray-700">
+                Set Default Text
+              </label>
+            </div>
+            
+            {selectedField.properties.hasDefaultText && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Default Text</label>
+                <input
+                  type="text"
+                  value={selectedField.properties.defaultText || ''}
+                  onChange={(e) => updateProperty('defaultText', e.target.value)}
+                  placeholder="Enter default text for this field"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  This text will appear as the default value in the field.
+                </p>
+              </div>
+            )}
           </div>
+
+
 
           <div className="flex items-center">
             <input
@@ -110,34 +133,7 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
             </label>
           </div>
 
-          {selectedField.type === 'text' && (
-            <div className="flex items-center">
-              <input
-                type="checkbox"
-                id="combed"
-                checked={selectedField.properties.combed || false}
-                onChange={(e) => updateProperty('combed', e.target.checked)}
-                className="mr-2 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-              />
-              <label htmlFor="combed" className="text-sm font-medium text-gray-700">
-                Combed (Character Boxes)
-              </label>
-            </div>
-          )}
 
-          {selectedField.properties.combed && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Character Count</label>
-              <input
-                type="number"
-                value={selectedField.properties.combedLength || 10}
-                onChange={(e) => updateProperty('combedLength', parseInt(e.target.value))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                min="1"
-                max="50"
-              />
-            </div>
-          )}
         </div>
 
         {/* Dropdown/Radio Options */}
@@ -181,144 +177,122 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
           </div>
         )}
 
-        {/* Appearance */}
-        <div className="space-y-4">
-          <h4 className="text-sm font-semibold text-gray-900 uppercase tracking-wide flex items-center">
-            <Palette className="w-4 h-4 mr-1" />
-            Appearance
-          </h4>
-          
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Font Size</label>
-            <input
-              type="number"
-              value={selectedField.properties.fontSize}
-              onChange={(e) => updateProperty('fontSize', parseInt(e.target.value))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              min="8"
-              max="72"
-            />
-          </div>
-
-          <div className="flex space-x-4">
-            <div className="flex items-center">
-              <input
-                type="checkbox"
-                id="bold"
-                checked={selectedField.properties.bold}
-                onChange={(e) => updateProperty('bold', e.target.checked)}
-                className="mr-2 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-              />
-              <label htmlFor="bold" className="text-sm font-medium text-gray-700">Bold</label>
-            </div>
+        {/* Checkbox Options */}
+        {selectedField.type === 'checkbox' && (
+          <div className="space-y-4">
+            <h4 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">Checkbox Options</h4>
             
-            <div className="flex items-center">
-              <input
-                type="checkbox"
-                id="italic"
-                checked={selectedField.properties.italic}
-                onChange={(e) => updateProperty('italic', e.target.checked)}
-                className="mr-2 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-              />
-              <label htmlFor="italic" className="text-sm font-medium text-gray-700">Italic</label>
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Background Color</label>
-            <div className="flex items-center space-x-2">
-              <input
-                type="color"
-                value={selectedField.properties.backgroundColor === 'transparent' ? '#ffffff' : selectedField.properties.backgroundColor}
-                onChange={(e) => updateProperty('backgroundColor', e.target.value)}
-                className="w-12 h-8 border border-gray-300 rounded cursor-pointer"
-              />
-              <button
-                onClick={() => updateProperty('backgroundColor', 'transparent')}
-                className={`px-3 py-1 text-xs rounded ${
-                  selectedField.properties.backgroundColor === 'transparent'
-                    ? 'bg-blue-100 text-blue-800'
-                    : 'bg-gray-100 text-gray-700'
-                }`}
+            {/* Default Option Selection */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Default Checked Option</label>
+              <select
+                value={selectedField.properties.defaultCheckedOption || ''}
+                onChange={(e) => {
+                  const selectedOption = e.target.value;
+                  updateProperty('defaultCheckedOption', selectedOption);
+                  
+                  // Update the default_checked property for all options
+                  if (selectedField.properties.checkboxOptions) {
+                    const updatedOptions = selectedField.properties.checkboxOptions.map(option => ({
+                      ...option,
+                      default_checked: option.label === selectedOption
+                    }));
+                    updateProperty('checkboxOptions', updatedOptions);
+                  }
+                }}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
-                Transparent
+                <option value="">No default selection</option>
+                {selectedField.properties.checkboxOptions?.map((option, index) => (
+                  <option key={index} value={option.label}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Checkbox Options Management */}
+            <div className="space-y-2">
+              {selectedField.properties.checkboxOptions?.map((option, index) => (
+                <div key={index} className="border border-gray-200 rounded-lg p-3 space-y-2">
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="text"
+                      value={option.label}
+                      onChange={(e) => {
+                        const newOptions = [...(selectedField.properties.checkboxOptions || [])];
+                        newOptions[index] = { ...newOptions[index], label: e.target.value };
+                        updateProperty('checkboxOptions', newOptions);
+                      }}
+                      placeholder="Option label"
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                    <button
+                      onClick={() => {
+                        const newOptions = selectedField.properties.checkboxOptions?.filter((_, i) => i !== index);
+                        updateProperty('checkboxOptions', newOptions);
+                      }}
+                      className="p-2 text-red-600 hover:bg-red-50 rounded-lg"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="text"
+                      value={option.field}
+                      onChange={(e) => {
+                        const newOptions = [...(selectedField.properties.checkboxOptions || [])];
+                        newOptions[index] = { ...newOptions[index], field: e.target.value };
+                        updateProperty('checkboxOptions', newOptions);
+                      }}
+                      placeholder="Field name"
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                    />
+                    <input
+                      type="text"
+                      value={option.field_value}
+                      onChange={(e) => {
+                        const newOptions = [...(selectedField.properties.checkboxOptions || [])];
+                        newOptions[index] = { ...newOptions[index], field_value: e.target.value };
+                        updateProperty('checkboxOptions', newOptions);
+                      }}
+                      placeholder="Field value"
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                    />
+                  </div>
+                </div>
+              ))}
+              <button
+                onClick={() => {
+                  const newOptions = [...(selectedField.properties.checkboxOptions || []), {
+                    label: `Option ${(selectedField.properties.checkboxOptions?.length || 0) + 1}`,
+                    field: `checkbox_${Date.now()}_${(selectedField.properties.checkboxOptions?.length || 0) + 1}`,
+                    field_value: `Yes_${(selectedField.properties.checkboxOptions?.length || 0) + 1}`,
+                    default_checked: false
+                  }];
+                  updateProperty('checkboxOptions', newOptions);
+                }}
+                className="w-full px-3 py-2 border border-dashed border-gray-300 rounded-lg text-sm text-gray-600 hover:border-gray-400 hover:text-gray-800"
+              >
+                + Add Checkbox Option
               </button>
             </div>
           </div>
+        )}
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Border Color</label>
-            <input
-              type="color"
-              value={selectedField.properties.borderColor}
-              onChange={(e) => updateProperty('borderColor', e.target.value)}
-              className="w-12 h-8 border border-gray-300 rounded cursor-pointer"
-            />
-          </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Border Width</label>
-            <input
-              type="range"
-              min="0"
-              max="5"
-              value={selectedField.properties.borderWidth}
-              onChange={(e) => updateProperty('borderWidth', parseInt(e.target.value))}
-              className="w-full"
-            />
-            <span className="text-xs text-gray-500">{selectedField.properties.borderWidth}px</span>
-          </div>
-        </div>
 
-        {/* Position & Size */}
-        <div className="space-y-4">
-          <h4 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">Position & Size</h4>
-          
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">X</label>
-              <input
-                type="number"
-                value={Math.round(selectedField.x)}
-                onChange={(e) => updateField('x', parseInt(e.target.value))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              />
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Y</label>
-              <input
-                type="number"
-                value={Math.round(selectedField.y)}
-                onChange={(e) => updateField('y', parseInt(e.target.value))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              />
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Width</label>
-              <input
-                type="number"
-                value={Math.round(selectedField.width)}
-                onChange={(e) => updateField('width', parseInt(e.target.value))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              />
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Height</label>
-              <input
-                type="number"
-                value={Math.round(selectedField.height)}
-                onChange={(e) => updateField('height', parseInt(e.target.value))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              />
-            </div>
-          </div>
-        </div>
+
 
         {/* Actions */}
-        <div className="pt-4 border-t border-gray-200">
+        <div className="pt-4 border-t border-gray-200 space-y-3">
+          <button
+            onClick={() => onFieldUpdate(selectedField.id, { isConfigured: true })}
+            className="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+          >
+            Done
+          </button>
           <button
             onClick={() => onFieldDelete(selectedField.id)}
             className="w-full px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
