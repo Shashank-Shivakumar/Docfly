@@ -1,5 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Send, Bot, User, ArrowLeft, FileText, CheckCircle } from 'lucide-react';
+import { Send, Bot, User, ArrowLeft, FileText } from 'lucide-react';
+import { 
+  chatbotApi, 
+  FormField, 
+  StartFormResponse, 
+  ChatResponseData,
+  AvailableFormsResponse,
+  downloadFromS3 
+} from '../services/chatbotApi';
 
 interface Message {
   id: string;
@@ -10,22 +18,9 @@ interface Message {
   options?: string[];
 }
 
-interface FormField {
-  display_text: string;
-  type: string;
-  form_feild: any;
-  _id: string;
-  question?: string;
-  next_question?: string;
-  previous_question?: string;
-  answer?: string;
-}
-
 interface ChatbotProps {
   onBack: () => void;
 }
-
-const CHATBOT_API_BASE = 'http://localhost:8000/api';
 
 export const Chatbot: React.FC<ChatbotProps> = ({ onBack }) => {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -37,6 +32,7 @@ export const Chatbot: React.FC<ChatbotProps> = ({ onBack }) => {
   const [availableForms, setAvailableForms] = useState<string[]>([]);
   const [selectedForm, setSelectedForm] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -48,14 +44,14 @@ export const Chatbot: React.FC<ChatbotProps> = ({ onBack }) => {
 
   useEffect(() => {
     loadAvailableForms();
-    addBotMessage("Welcome! I'll help you fill out forms by asking questions. Please select a form to get started.");
+    addBotMessage("Welcome! I'll help you fill out forms by asking questions. Please select a form to get started or click 'Start Survey' to begin with a sample form.");
   }, []);
 
   const loadAvailableForms = async () => {
     try {
-      const response = await fetch(`${CHATBOT_API_BASE}/forms`);
-      const data = await response.json();
-      setAvailableForms(data.forms);
+      const data: AvailableFormsResponse = await chatbotApi.getAvailableForms();
+      // Use pdf_files if available, otherwise fall back to forms
+      setAvailableForms(data.pdf_files || data.forms);
     } catch (error) {
       console.error('Error loading forms:', error);
       addBotMessage("Sorry, I couldn't load the available forms. Please try again later.");
@@ -87,20 +83,27 @@ export const Chatbot: React.FC<ChatbotProps> = ({ onBack }) => {
   const startForm = async (formName: string) => {
     setIsLoading(true);
     try {
-      const response = await fetch(`${CHATBOT_API_BASE}/start_fill_form/${formName}`);
-      const data = await response.json();
+      const data: StartFormResponse = await chatbotApi.startFillForm(formName);
       
-      if (data.type === 'question') {
-        setCurrentQuestion(data.body);
-        setProgress(data.progress);
+      console.log('🚀 Start form response:', data);
+      
+      // Handle different response types - check for both 'question' type and 'success' flag
+      if (data.type === 'question' || (data as any).success === true) {
+        const questionData = data.body;
+        setCurrentQuestion(questionData);
+        setProgress(data.progress || { current: 1, total: 1 });
         setSelectedForm(formName);
         
-        const questionText = data.body.question || data.body.display_text;
-        const options = data.body.type === 'check_list' && data.body.form_feild 
-          ? Object.keys(data.body.form_feild) 
+        const questionText = questionData.question || questionData.display_text;
+        const options = questionData.type === 'check_list' && questionData.form_feild 
+          ? Object.keys(questionData.form_feild) 
           : undefined;
         
+        console.log('❓ First question:', questionText, 'Options:', options);
         addBotMessage(questionText, true, options);
+      } else {
+        console.error('❌ Unexpected response type:', data.type);
+        addBotMessage("Sorry, I couldn't start the form. Please try again.");
       }
     } catch (error) {
       console.error('Error starting form:', error);
@@ -116,47 +119,62 @@ export const Chatbot: React.FC<ChatbotProps> = ({ onBack }) => {
     console.log('🔍 Submitting answer:', {
       question: currentQuestion.display_text,
       form_feild: currentQuestion.form_feild,
-      answer: answer
+      answer: answer,
+      type: currentQuestion.type
     });
 
     addUserMessage(answer);
     setIsLoading(true);
 
     try {
-      const requestBody = {
-        current_id: currentQuestion.form_feild,
-        answer: answer
-      };
+      let currentId: string;
       
-      console.log('📤 Sending request:', requestBody);
-      
-      const response = await fetch(`${CHATBOT_API_BASE}/chat_response`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(requestBody)
+      // Use the _id field from the current question as current_id
+      currentId = currentQuestion._id || currentQuestion.form_feild as string;
+      console.log('🔧 Using current_id:', { 
+        currentId, 
+        questionType: currentQuestion.type,
+        answer 
       });
 
-      const data = await response.json();
+      const data: ChatResponseData = await chatbotApi.sendChatResponse(currentId, answer);
+      
       console.log('📥 Received response:', data);
+
+      // Check for download URL in response
+      // if (data.s3_presigned_url) {
+      //   setDownloadUrl(data.s3_presigned_url);
+      // }
 
       if (data.type === 'complete_message') {
         setIsCompleted(true);
-        addBotMessage(data.message);
+        setDownloadUrl(data.s3_presigned_url ?? null);
+        addBotMessage(data.message || "Form completed!");
         addBotMessage("🎉 Form completed successfully! All your answers have been saved.");
+        
+        // If there's a download URL, show download message
+        if (data.s3_presigned_url) {
+          addBotMessage("📄 Your filled form is ready for download!");
+        }
+        
         setCurrentQuestion(null);
-      } else if (data.type === 'question') {
-        setCurrentQuestion(data.body);
-        setProgress(data.progress);
-        
-        const questionText = data.body.question || data.body.display_text;
-        const options = data.body.type === 'check_list' && data.body.form_feild 
-          ? Object.keys(data.body.form_feild) 
-          : undefined;
-        
-        console.log('➡️ Next question:', questionText, 'Options:', options);
-        addBotMessage(questionText, true, options);
+      } else if (data.body || data.type === 'question') {
+        const questionData = data.body;
+        if (questionData) {
+          setCurrentQuestion(questionData);
+          setProgress(data.progress || { current: 0, total: 0 });
+          
+          const questionText = questionData.question || questionData.display_text;
+          const options = questionData.type === 'check_list' && questionData.form_feild 
+            ? Object.keys(questionData.form_feild) 
+            : undefined;
+          
+          console.log('➡️ Next question:', questionText, 'Options:', options);
+          addBotMessage(questionText, true, options);
+        }
+      } else {
+        console.error('❌ Unexpected response type:', data.type);
+        addBotMessage("Sorry, there was an unexpected response from the server.");
       }
     } catch (error) {
       console.error('❌ Error submitting answer:', error);
@@ -174,6 +192,18 @@ export const Chatbot: React.FC<ChatbotProps> = ({ onBack }) => {
     }
   };
 
+  // Add download handler function
+  const handleDownload = async () => {
+    if (downloadUrl) {
+      try {
+        await downloadFromS3(downloadUrl, `${selectedForm || 'form'}-filled.pdf`);
+      } catch (error) {
+        console.error('Error downloading file:', error);
+        addBotMessage("Sorry, there was an error downloading the file. Please try again.");
+      }
+    }
+  };
+
   const handleOptionClick = (option: string) => {
     if (!isLoading) {
       submitAnswer(option);
@@ -185,12 +215,20 @@ export const Chatbot: React.FC<ChatbotProps> = ({ onBack }) => {
     startForm(formName);
   };
 
+  const handleStartSurvey = async () => {
+    // const sampleFormName = "sample_form";
+    const sampleFormName = "Profile"; // Default sample form
+    addUserMessage(`Starting survey: ${sampleFormName}`);
+    await startForm(sampleFormName);
+  };
+
   const resetChat = () => {
     setMessages([]);
     setCurrentQuestion(null);
     setProgress({ current: 0, total: 0 });
     setIsCompleted(false);
     setSelectedForm(null);
+    setDownloadUrl(null); // Clear download URL
     addBotMessage("Welcome back! Please select a form to get started.");
   };
 
@@ -211,6 +249,18 @@ export const Chatbot: React.FC<ChatbotProps> = ({ onBack }) => {
             <h1 className="text-xl font-semibold text-gray-900">Form Assistant</h1>
           </div>
         </div>
+        
+        {/* Start Survey Button */}
+        {!selectedForm && !isCompleted && (
+          <button
+            onClick={handleStartSurvey}
+            disabled={isLoading}
+            className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            <FileText className="w-4 h-4 mr-2" />
+            Start Survey
+          </button>
+        )}
         
         {progress.total > 0 && (
           <div className="flex items-center space-x-3">
@@ -347,10 +397,20 @@ export const Chatbot: React.FC<ChatbotProps> = ({ onBack }) => {
         </div>
       )}
 
-      {/* Completion Actions */}
+            {/* Completion Actions */}
       {isCompleted && (
         <div className="bg-white border-t border-gray-200 p-4">
           <div className="max-w-3xl mx-auto flex justify-center space-x-4">
+            {/* Download Button - only show if download URL is available */}
+            {downloadUrl && (
+              <button
+                onClick={handleDownload}
+                className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center space-x-2"
+              >
+                <FileText className="w-4 h-4" />
+                <span>Download Filled Form</span>
+              </button>
+            )}
             <button
               onClick={resetChat}
               className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center space-x-2"

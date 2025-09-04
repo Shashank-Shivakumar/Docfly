@@ -1,5 +1,6 @@
 import { PDFDocument as PDFLibDocument, PDFTextField, PDFCheckBox, PDFDropdown, PDFRadioGroup, PDFForm, rgb } from 'pdf-lib';
 import { FormField, PDFDocument } from '../types';
+import { uploadFile, createFormMapping } from '../services/chatbotApi';
 
 // Generate unique ID for form fields
 const generateUniqueId = (baseId: string, index: number): string => {
@@ -61,18 +62,62 @@ export const exportFormJSON = (document: PDFDocument): string => {
   return JSON.stringify(formJson, null, 2);
 };
 
+// export const exportFillablePDF = async (document: PDFDocument): Promise<Uint8Array> => {
+//   if (!document.file) {
+//     throw new Error('No PDF file loaded');
+//   }
+//   //Form fields Format.
+//   function extractFieldsJson(fields: FormField[]) {
+//   return fields.map(field => ({
+//     display_text: field.properties.question,
+//     type: field.type,
+//     form_field: field.properties.name
+//   }));
+// }
+//   try {
+//     // Read the original PDF
+//     const arrayBuffer = await document.file.arrayBuffer();
+//     const pdfDoc = await PDFLibDocument.load(arrayBuffer);
+//     const form = pdfDoc.getForm();
+
+//     // Add form fields
+//     for (const field of document.fields) {
+//       await addFormFieldToPDF(form, field, pdfDoc);
+//     }
+
+//     const fieldsJson = extractFieldsJson(document.fields);
+//     const filename = `${document.name.replace('.pdf', '')}`;
+//     // await fetch('http://localhost:8000/api/create_form_mapping', {
+//     //   method: 'POST',
+//     //   headers: {
+//     //     'Content-Type': 'application/json',
+//     //   },
+//     //   body: JSON.stringify({ form_id: filename, mapping_data: fieldsJson }),
+//     // });
+//     console.log('Fields JSON:', fieldsJson);
+//     console.log('File Name:', filename);
+
+//     // Save the PDF
+//     return await pdfDoc.save();
+//   } catch (error) {
+//     console.error('Error exporting fillable PDF:', error);
+//     throw new Error('Failed to export fillable PDF');
+//   }
+// };
+
 export const exportFillablePDF = async (document: PDFDocument): Promise<Uint8Array> => {
   if (!document.file) {
     throw new Error('No PDF file loaded');
   }
-  //Form fields Format.
+
   function extractFieldsJson(fields: FormField[]) {
-  return fields.map(field => ({
-    display_text: field.properties.question,
-    type: field.type,
-    form_field: field.properties.name
-  }));
-}
+    return fields.map(field => ({
+      display_text: field.properties.question,
+      type: field.type,
+      form_field: field.properties.name
+    }));
+  }
+
   try {
     // Read the original PDF
     const arrayBuffer = await document.file.arrayBuffer();
@@ -84,26 +129,42 @@ export const exportFillablePDF = async (document: PDFDocument): Promise<Uint8Arr
       await addFormFieldToPDF(form, field, pdfDoc);
     }
 
-    const fieldsJson = extractFieldsJson(document.fields);
+    const formJsonString = exportFormJSON(document);
+    const formJsonData = JSON.parse(formJsonString);
+    // const fieldsJson = extractFieldsJson(document.fields);
     const filename = `${document.name.replace('.pdf', '')}`;
-    // await fetch('http://localhost:8000/api/create_form_mapping', {
-    //   method: 'POST',
-    //   headers: {
-    //     'Content-Type': 'application/json',
-    //   },
-    //   body: JSON.stringify({ form_id: filename, mapping_data: fieldsJson }),
-    // });
-    console.log('Fields JSON:', fieldsJson);
-    console.log('File Name:', filename);
 
     // Save the PDF
-    return await pdfDoc.save();
+    const pdfBytes = await pdfDoc.save();
+
+    // Upload the PDF to server
+    try {
+      const file = new File([pdfBytes], `${filename}.pdf`, { type: 'application/pdf' });
+      const uploadResponse = await uploadFile(file);
+      console.log('PDF uploaded successfully:', uploadResponse);
+    } catch (uploadError) {
+      console.error('Error uploading PDF:', uploadError);
+    }
+
+    // Create form mapping with the exported JSON
+    try {
+      const mappingResponse = await createFormMapping(filename, formJsonData);
+      console.log('Form mapping created successfully:', mappingResponse);
+      console.log('Form JSON sent:', formJsonData);
+    } catch (mappingError) {
+      console.error('Error creating form mapping:', mappingError);
+    }
+
+    console.log('Form JSON:', formJsonString);
+    console.log('File Name:', filename);
+
+    return pdfBytes;
   } catch (error) {
     console.error('Error exporting fillable PDF:', error);
     throw new Error('Failed to export fillable PDF');
   }
 };
-
+  
 export const exportFlattenedPDF = async (document: PDFDocument): Promise<Uint8Array> => {
   if (!document.file) {
     throw new Error('No PDF file loaded');

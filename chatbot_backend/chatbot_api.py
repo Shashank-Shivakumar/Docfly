@@ -120,9 +120,28 @@ async def chat_response(response: ChatResponse):
     for sid, session in user_sessions.items():
         form_data = session["form_data"]
         for i, item in enumerate(form_data):
-            if item["form_feild"] == current_id:
+            # Check if current_id matches _id field first (new format)
+            if item.get("_id") == current_id:
                 session_id = sid
                 current_question_index = i
+                print(f"🔧 Found question by _id: {current_id}")
+                break
+            # Handle different form_feild types (legacy format)
+            elif item["type"] == "check_list" and isinstance(item["form_feild"], dict):
+                # For checkbox questions, check if current_id matches any field in the options
+                checkbox_options = item["form_feild"]
+                for option_name, option_list in checkbox_options.items():
+                    if isinstance(option_list, list) and len(option_list) > 0:
+                        if option_list[0].get("field") == current_id:
+                            session_id = sid
+                            current_question_index = i
+                            print(f"🔧 Found checkbox field: {current_id} in option: {option_name}")
+                            break
+            elif item["form_feild"] == current_id:
+                # For text questions, direct match
+                session_id = sid
+                current_question_index = i
+                print(f"🔧 Found text field: {current_id}")
                 break
         if session_id:
             break
@@ -141,8 +160,25 @@ async def chat_response(response: ChatResponse):
     
     # Update the form data with the answer
     for item in form_data:
-        if item["form_feild"] == current_id:
+        # Check _id field first (new format)
+        if item.get("_id") == current_id:
             item["answer"] = answer
+            print(f"🔧 Updated answer by _id: {current_id} = {answer}")
+            break
+        # Handle different form_feild types (legacy format)
+        elif item["type"] == "check_list" and isinstance(item["form_feild"], dict):
+            # For checkbox questions, update the specific option
+            checkbox_options = item["form_feild"]
+            for option_name, option_list in checkbox_options.items():
+                if isinstance(option_list, list) and len(option_list) > 0:
+                    if option_list[0].get("field") == current_id:
+                        item["answer"] = answer
+                        print(f"🔧 Updated checkbox answer: {option_name} = {answer}")
+                        break
+        elif item["form_feild"] == current_id:
+            # For text questions, direct update
+            item["answer"] = answer
+            print(f"🔧 Updated text answer: {current_id} = {answer}")
             break
     
     # Move to next question
