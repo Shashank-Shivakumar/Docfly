@@ -1,0 +1,25 @@
+[
+  {
+    "display_text": "Are you human?",
+    "answer": "",
+    "type": "check_list",
+    "form_feild": {
+      "Yes": [
+        {
+          "label": "Yes",
+          "field": "checkbox_1755662793905_1",
+          "field_value": "Yes",
+          "default_checked": true
+        }
+      ],
+      "No": [
+        {
+          "label": "No",
+          "field": "checkbox_1755662793905_2",
+          "field_value": "No",
+          "default_checked": false
+        }
+      ]
+    }
+  }
+]
